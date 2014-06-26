@@ -57,7 +57,8 @@ function catalog_download_block($op = 'list', $delta = 0, $edit = array()) {
       case 'course_demo':
         $block = array(
           'subject' => t('Try a Demo Course'),
-          'content' => drupal_get_form('catalog_download_demo_course_form'),
+          //'content' => drupal_get_form('catalog_download_demo_course_form'),
+          'content' => t('blurg'),
          );
          break;
     }
