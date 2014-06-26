@@ -1,0 +1,145 @@
+<?php
+
+/* Constants */
+define('IS_PAGE', FALSE);
+define('IS_BLOCK', TRUE);
+
+/**
+ * Implements hook_help().
+ */
+function catalog_download_help($path, $arg) {
+  switch($path) {
+    case 'admin/help#catalog_download':
+      return '<p>' . t('This module provides a form for downloading the City Vision college catalog, and a form for requesting more information about the college.') . '</p>';
+  }
+}
+
+/**
+ * Implements hook_menu().
+ * Creates page for catalog download form.
+ */
+function catalog_download_menu() {
+  $items = array();
+ 
+  $items['view-catalog'] = array(
+    'title' => 'Download City Vision Catalog',
+    'page callback' => 'catalog_download_page',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_block().
+ * Creates a block with the catalog download form.
+ */
+function catalog_download_block($op = 'list', $delta = 0, $edit = array()) {
+  if($op == 'list') {
+    $blocks['email_inquiry'] = array(
+      'info' => t('Email Inquiry Form (Revised)'),
+      'status' => 0,
+    );
+    return $blocks;
+  }
+  elseif($op == 'view') {
+    $block = array(
+      'subject' => t('Request Additional Information'),
+      'content' => drupal_get_form('catalog_download_form', IS_BLOCK),
+    );
+    return $block;
+  }
+}
+
+/**
+ * Page callback for catalog download form.
+ */
+function catalog_download_page() {
+  $content = '';
+  $content .= '<p>' . t('Learn more about City Vision College by downloading our catalog. If you would like to be added to our email list, please enter your email address.') . '</p>';
+  $content .= drupal_get_form('catalog_download_form', IS_PAGE);
+  $content .= '<p>' . t('You need Adobe Reader to view this catalog. You can <a href="@url">download Reader</a> for free.', array('@url' => url('http://get.adobe.com/reader'))) . '</p>';
+  return $content;
+}
+
+/**
+ * Catalog download form.
+ */
+function catalog_download_form(&$form_state, $form_context = IS_PAGE) {
+  $form['email'] = array(
+    '#title' => t('Email'),
+    '#type' => 'textfield',
+    '#size' => 20,
+    '#required' => FALSE
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#attributes' => array('alt' => 'Submit', 'onclick' => "_gaq.push(['_trackPageview', '/goal/email']);"),
+    '#value' => t('Download Now'),
+  );
+  if($form_context == IS_BLOCK) {
+    $form['submit']['#value'] = t('Request More Info');
+    $form['context'] = array('#type' => 'hidden', '#value' => $form_context);
+  }
+  else if($form_context == IS_PAGE) {
+    $form['link'] = array(
+      '#value' => '<p class="small-text">' . t('<a href="@url">No thanks, I\'d just like the catalog.</a>', array('@url' => url('http://www.cityvision.edu/files/catalog.pdf'))) . '</p>',
+    );
+    $form['context'] = array('#type' => 'hidden', '#value' => $form_context);
+  }
+  // Add honeypot protection.
+  if(module_exists('honeypot')) {
+    honeypot_add_form_protection($form, $form_state, array('honeypot'));
+  }
+  return $form;
+}
+
+function catalog_download_form_validate($form, &$form_state) {
+  // For catalog download, removed validation as per Andrew's request
+  // for compliance with DETC regulations.
+  if($form_state['values']['context'] == IS_PAGE) {
+    // Do nothing.
+  }
+  else {
+    if(!valid_email_address($form_state['values']['email'])) {
+      form_set_error('email', t('Please enter a valid email address.'));
+    }
+  }
+}
+
+function catalog_download_form_submit($form, &$form_state) {
+  // Create a lead based on the email address.
+  $result = catalog_download_create_lead($form_state['values']['email']);
+  // If this is the catalog download page, then redirect to the catalog.
+  if($form_state['values']['context'] == IS_PAGE) {
+    drupal_goto('http://www.cityvision.edu/files/CityVision_catalog_2013-14_v2-1.pdf');
+  }
+  // Otherwise, redirect to the full inquiry form.
+  else {
+    drupal_goto('cms/cv/view-catalog', array('tfa_Email' => $form_state['values']['email']));
+  }
+}
+
+function catalog_download_create_lead($email) {
+  $lead = new stdClass();
+  $lead->FirstName = 'TempFirstName';
+  $lead->LastName = 'TempLastName';
+  $lead->Email = $email;
+  $lead->Company = 'Individual';
+  $lead->Lead_Form_Source__c = 'City Vision Email Inquiry Form';
+  $query = "SELECT Id FROM Lead WHERE Email = '" . $email . "' ORDER BY CreatedDate ASC";
+  if($sf = salesforce_api_connect()) {
+    try {
+      $result = $sf->client->query($query);
+    }
+    catch (Exception $e) {
+      salesforce_api_log(SALESFORCE_LOG_SOME, 'Exception in catalog_download Lead record matching: ' . $e->getMessage, array(), WATCHDOG_ALERT);
+    }
+  }
+  // If no matching results, create the Lead.
+  if($result->size == 0) {
+    $result = salesforce_api_upsert(array($lead), 'Lead');
+  }
+  return $result;
+}
+

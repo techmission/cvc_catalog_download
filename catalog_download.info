@@ -1,0 +1,5 @@
+name = CityVision.edu Catalog Download Form
+description = Creates a special CityVision.edu catalog form.
+package = Custom Modules
+core = 6.x
+version = 6.x-1.0
