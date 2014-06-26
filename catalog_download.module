@@ -123,7 +123,7 @@ function catalog_download_form_validate($form, &$form_state) {
 
 function catalog_download_form_submit($form, &$form_state) {
   // Create a lead based on the email address.
-  $result = catalog_download_create_lead($form_state['values']['email']);
+  $result = catalog_download_create_lead($form_state['values']['email'], 'City Vision Email Inquiry Form');
   // If this is the catalog download page, then redirect to the catalog.
   if($form_state['values']['context'] == IS_PAGE) {
     drupal_goto('http://www.cityvision.edu/files/CityVision_catalog_2013-14_v2-1.pdf');
@@ -157,17 +157,17 @@ function catalog_download_course_demo_form(&$form_state) {
 
 function catalog_download_course_demo_form_submit($form, &$form_state) {
   // Create a lead based on the email address.
-  $result = catalog_download_create_lead($form_state['values']['email']);
+  $result = catalog_download_create_lead($form_state['values']['email'], 'City Vision College Course Demo Form');
   drupal_goto('cms/cv/moodle-guest-login');
 }
 
-function catalog_download_create_lead($email) {
+function catalog_download_create_lead($email, $lead_form_source) {
   $lead = new stdClass();
   $lead->FirstName = 'TempFirstName';
   $lead->LastName = 'TempLastName';
   $lead->Email = $email;
   $lead->Company = 'Individual';
-  $lead->Lead_Form_Source__c = 'City Vision Email Inquiry Form';
+  $lead->Lead_Form_Source__c = $lead_form_source;
   $query = "SELECT Id FROM Lead WHERE Email = '" . $email . "' ORDER BY CreatedDate ASC";
   if($sf = salesforce_api_connect()) {
     try {
