@@ -303,5 +303,12 @@ function program_inquiry_create_lead($values, $lead_form_source) {
   if($result->size == 0) {
     $result = salesforce_api_upsert(array($lead), 'Lead');
   }
+  // Otherwise update the earliest matching Lead.
+  elseif($result->size > 0) {
+    if(isset($result->records[0]->Id)) {
+      $lead->Id = $result->records[0]->Id;
+      $result = salesforce_api_upsert(array($lead), 'Lead');
+    }
+  }
   return $result;
 }
