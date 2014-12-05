@@ -94,7 +94,7 @@ function catalog_download_block($op = 'list', $delta = 0, $edit = array()) {
       case 'npo_mgmt_inquiry':
         $block = array(
           'subject' => t('Learn More'),
-          'content' => drupal_get_form('program_inquiry_form', NPO_MGMT);
+          'content' => drupal_get_form('program_inquiry_form', NPO_MGMT),
         );
         break;
     }
