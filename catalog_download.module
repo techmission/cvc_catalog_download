@@ -81,19 +81,19 @@ function catalog_download_block($op = 'list', $delta = 0, $edit = array()) {
          break;
       case 'addiction_studies_inquiry':
         $block = array(
-          'subject' => t('Learn More'),
+          'subject' => t('Request Program Information'),
           'content' => drupal_get_form('program_inquiry_form', ADD_STUDIES),
         );
         break;
       case 'urban_missions_inquiry':
         $block = array(
-           'subject' => t('Learn More'),
+           'subject' => t('Request Program Information'),
            'content' => drupal_get_form('program_inquiry_form', URB_MISSIONS),
         );
         break;
       case 'npo_mgmt_inquiry':
         $block = array(
-          'subject' => t('Learn More'),
+          'subject' => t('Request Program Information'),
           'content' => drupal_get_form('program_inquiry_form', NPO_MGMT),
         );
         break;
@@ -299,10 +299,11 @@ function program_inquiry_create_lead($values, $program_name, $lead_form_source) 
   $lead->Email = $values['email'];
   $lead->Phone = $values['phone'];
   $lead->Company = 'Individual';
+  $lead->Country = 'United States';
   $lead->Lead_Form_Source__c = $lead_form_source;
   $lead->City_Vision_Major__c = $program_name;
   $lead->City_Vision_Program_Interest__c = 'BA/BS Degree Completion Program';
-  $query = "SELECT Id FROM Lead WHERE Email = '" . $email . "' ORDER BY CreatedDate ASC";
+  $query = "SELECT Id FROM Lead WHERE Email = '" . $values['email'] . "' ORDER BY CreatedDate ASC";
   if($sf = salesforce_api_connect()) {
     try {
       $result = $sf->client->query($query);
@@ -312,14 +313,17 @@ function program_inquiry_create_lead($values, $program_name, $lead_form_source) 
     }
   }
   // If no matching results, create the Lead.
+  // salesforce_api_log(SALESFORCE_LOG_SOME, print_r($lead, TRUE), array(), WATCHDOG_NOTICE);
   if($result->size == 0) {
     $result = salesforce_api_upsert(array($lead), 'Lead');
+    // salesforce_api_log(SALESFORCE_LOG_SOME, 'Lead with no match:' . print_r($lead, TRUE), array(), WATCHDOG_NOTICE);
   }
   // Otherwise update the earliest matching Lead.
   elseif($result->size > 0) {
     if(isset($result->records[0]->Id)) {
       $lead->Id = $result->records[0]->Id;
       $result = salesforce_api_upsert(array($lead), 'Lead');
+      // salesforce_api_log(SALESFORCE_LOG_SOME, 'Lead with match: ' . print_r($lead, TRUE), array(), WATCHDOG_NOTICE);
     }
   }
   return $result;
