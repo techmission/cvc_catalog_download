@@ -6,10 +6,11 @@
 define('IS_PAGE', FALSE);
 define('IS_BLOCK', TRUE);
 
-// Additional field to be passed in
+// Type of inquiry form
 define('ADD_STUDIES', 1);
 define('URB_MISSIONS', 2);
 define('NPO_MGMT', 3);
+define('AFFORDABILITY', 4);
 
 /**
  * Implements hook_help().
@@ -63,6 +64,10 @@ function catalog_download_block($op = 'list', $delta = 0, $edit = array()) {
       'info' => t('Nonprofit Management Inquiry'),
       'status' => 0,
     );
+    $blocks['affordability_inquiry'] = array(
+      'info' => t('Affordability Inquiry'),
+      'status' => 0,
+    );
     return $blocks;
   }
   elseif($op == 'view') {
@@ -97,6 +102,11 @@ function catalog_download_block($op = 'list', $delta = 0, $edit = array()) {
           'content' => drupal_get_form('program_inquiry_form', NPO_MGMT),
         );
         break;
+      case 'affordability_inquiry':
+        $block = array(
+          'subject' => t(Request Program Information'),
+          'content' => drupal_get_form('program_inquiry_form', AFFORDABILITY);
+        );
     }
     return $block;
   }
@@ -225,28 +235,33 @@ function catalog_download_create_lead($email, $lead_form_source) {
  * Program inquiry form.
  */
 function program_inquiry_form(&$form_state, $program_type) {
+  drupal_add_js(drupal_get_path('module', 'catalog_download') . '/js/catalog_download.js');
   $form['firstname'] = array(
     '#title' => t('First Name'),
     '#type' => 'textfield',
     '#size' => 20,
+    '#attributes' => array('placeholder' => 'First Name'),
     '#required' => TRUE,
   );
   $form['lastname'] = array(
     '#title' => t('Last Name'),
     '#type' => 'textfield',
     '#size' => 20,
+    '#attributes' => array('placeholder' => 'Last Name'),
     '#required' => TRUE,
   );
   $form['email'] = array(
     '#title' => t('Email Address'),
     '#type' => 'textfield',
     '#size' => 20,
+    '#attributes' => array('placeholder' => 'Email Address'),
     '#required' => TRUE,
   );
   $form['phone'] = array(
     '#title' => t('Phone Number'),
     '#type' => 'textfield',
     '#size' => 20,
+    '#attributes' => array('placeholder' => 'Phone Number'),
     '#required' => TRUE,
   );
   $form['program'] = array(
@@ -267,22 +282,26 @@ function program_inquiry_form(&$form_state, $program_type) {
 function program_inquiry_form_submit($form, &$form_state) {
   // Create a lead based on the values from the inquiry form.
   $lead_form_source = '';
+  $program_name = '';
   switch($form_state['values']['program']) {
     case ADD_STUDIES:
       $lead_form_source = 'City Vision College Addiction Studies Inquiry';
+      $program_name = 'Addiction Studies';
       break;
     case URB_MISSIONS:
       $lead_form_source = 'City Vision College Urban Missions Inquiry';
+      $program_name = 'Urban Missions';
       break;
     case NPO_MGMT:
       $lead_form_source = 'City Vision College Nonprofit Management Inquiry';
+      $program_name = 'Nonprofit Management';
       break;
   }
-  $result = program_inquiry_create_lead($form_state['values'], $lead_form_source);
+  $result = program_inquiry_create_lead($form_state['values'], $program_name, $lead_form_source);
   drupal_goto('http://www.cityvision.edu/files/catalog.pdf');
 }
 
-function program_inquiry_create_lead($values, $lead_form_source) {
+function program_inquiry_create_lead($values, $program_name, $lead_form_source) {
   $lead = new stdClass();
   $lead->FirstName = $values['firstname'];
   $lead->LastName = $values['lastname'];
@@ -290,6 +309,8 @@ function program_inquiry_create_lead($values, $lead_form_source) {
   $lead->Phone = $values['phone'];
   $lead->Company = 'Individual';
   $lead->Lead_Form_Source__c = $lead_form_source;
+  $lead->City_Vision_Major__c = $program_name;
+  $lead->City_Vision_Program_Interest__c = 'BA/BS Degree Completion Program';
   $query = "SELECT Id FROM Lead WHERE Email = '" . $email . "' ORDER BY CreatedDate ASC";
   if($sf = salesforce_api_connect()) {
     try {
