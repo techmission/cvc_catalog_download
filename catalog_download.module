@@ -104,8 +104,8 @@ function catalog_download_block($op = 'list', $delta = 0, $edit = array()) {
         break;
       case 'affordability_inquiry':
         $block = array(
-          'subject' => t(Request Program Information'),
-          'content' => drupal_get_form('program_inquiry_form', AFFORDABILITY);
+          'subject' => t('Request Program Information'),
+          'content' => drupal_get_form('program_inquiry_form', AFFORDABILITY),
         );
     }
     return $block;
